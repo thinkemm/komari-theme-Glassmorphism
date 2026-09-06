@@ -459,7 +459,7 @@ function hasRegion(region: string | null | undefined): boolean {
         <button
           type="button"
           data-node-ping-tasks
-          class="group/panel relative flex w-full flex-col rounded-lg bg-slate-500/5 text-left"
+          class="group/panel relative flex w-full flex-col items-stretch rounded-lg bg-slate-500/5 text-left"
           :class="[nodeCardPingPanelClass, !props.node.online ? 'blur-xs opacity-50' : '']"
           :aria-label="`${props.node.name} Ping 任务监测`"
           @click.stop="emit('pingClick')"
@@ -469,13 +469,17 @@ function hasRegion(region: string | null | undefined): boolean {
               v-for="task in taskDisplays"
               :key="task.taskId"
               :data-node-ping-task-id="task.taskId"
-              class="min-w-0 border-border/40 py-0.5 not-first:border-t not-first:pt-2"
+              class="w-full min-w-0 self-stretch border-border/40 py-0.5 not-first:border-t not-first:pt-2"
               :title="task.tooltip"
             >
-              <div class="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(3.5rem,auto)_minmax(3rem,auto)] items-center gap-1.5 text-[11px] leading-none">
-                <span class="min-w-0 truncate font-medium" :title="task.taskName">{{ task.taskName }}</span>
-                <span class="truncate text-right tabular-nums text-muted-foreground">{{ task.latencyDisplay }}</span>
-                <span class="truncate text-right tabular-nums text-muted-foreground">{{ task.lossDisplay }}</span>
+              <div data-node-ping-task-header class="grid min-w-0 grid-cols-2 items-center gap-1.5 text-[11px] leading-none">
+                <div class="flex min-w-0 items-center gap-1.5">
+                  <span class="min-w-0 flex-1 truncate font-medium" :title="task.taskName">{{ task.taskName }}</span>
+                  <span data-node-ping-task-latency class="shrink-0 text-right tabular-nums text-muted-foreground">{{ task.latencyDisplay }}</span>
+                </div>
+                <div class="flex min-w-0 items-center justify-end">
+                  <span data-node-ping-task-loss class="shrink-0 text-right tabular-nums text-muted-foreground">{{ task.lossDisplay }}</span>
+                </div>
               </div>
               <div class="mt-1 grid min-w-0 grid-cols-2 gap-1.5">
                 <div
@@ -512,11 +516,15 @@ function hasRegion(region: string | null | undefined): boolean {
             </div>
           </template>
 
-          <div v-else class="min-w-0" :title="latencyPanelTooltip || lossPanelTooltip">
-            <div class="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(3.5rem,auto)_minmax(3rem,auto)] items-center gap-1.5 text-[11px] leading-none">
-              <span class="min-w-0 truncate text-muted-foreground">暂无 Ping 任务</span>
-              <span class="truncate text-right tabular-nums text-muted-foreground">{{ latencyDisplay === '-' ? '-- ms' : latencyDisplay }}</span>
-              <span class="truncate text-right tabular-nums text-muted-foreground">{{ lossDisplay === '-' ? '--%' : lossDisplay }}</span>
+          <div v-else class="w-full min-w-0 self-stretch" :title="latencyPanelTooltip || lossPanelTooltip">
+            <div data-node-ping-task-header class="grid min-w-0 grid-cols-2 items-center gap-1.5 text-[11px] leading-none">
+              <div class="flex min-w-0 items-center gap-1.5">
+                <span class="min-w-0 flex-1 truncate text-muted-foreground">暂无 Ping 任务</span>
+                <span data-node-ping-task-latency class="shrink-0 text-right tabular-nums text-muted-foreground">{{ latencyDisplay === '-' ? '-- ms' : latencyDisplay }}</span>
+              </div>
+              <div class="flex min-w-0 items-center justify-end">
+                <span data-node-ping-task-loss class="shrink-0 text-right tabular-nums text-muted-foreground">{{ lossDisplay === '-' ? '--%' : lossDisplay }}</span>
+              </div>
             </div>
             <div class="mt-1 grid min-w-0 grid-cols-2 gap-1.5">
               <div

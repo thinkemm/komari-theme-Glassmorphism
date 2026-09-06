@@ -12,6 +12,25 @@
 
 ## 当前任务
 
+- 状态：done，首页多 Ping 任务标题与彩条列错位已修复并完成本地验证
+- 目标：延迟值固定对齐左侧延迟彩条的右边缘，丢包率固定对齐右侧丢包彩条的右边缘；覆盖 iPhone 14 Pro 与桌面宽度。
+- 里程碑：M4 响应式 UI 修复；与 XS Max 全宽兼容修复合并验证，不改 Ping 数据或请求链路。
+- 根因：任务标题当前使用 `任务名 1fr + 延迟 auto + 丢包 auto` 三列，而彩条使用两个等宽列；任务名的剩余空间导致延迟与丢包一起挤到整行右侧，无法对应各自下方半区。
+- 计划：标题改用与彩条相同的 `grid-cols-2` 和 gap；左半区内部为可截断任务名 + 右对齐延迟，右半区为右对齐丢包；空状态保持相同结构；回归直接比较数值与对应 bar 容器的右边缘。
+- 涉及文件：`src/components/NodeCard.vue`、`tests/visual/visual.spec.ts`、`AICACHE.md`。
+- 实际修改：任务标题与下方彩条共用两等分列语义；左列内部用可收缩任务名和固定延迟值，右列仅将丢包率靠右。空状态同步使用相同结构，长任务名继续省略且不会挤走数值。
+- 验证：Bun 1.3.14 下 `bun run lint`、`bun run build`、`git diff --check` 通过；系统 Chrome 聚焦用例 3/3 通过，覆盖原多任务顺序/无溢出、414x896 XS Max 全宽，以及 393x852 iPhone 14 Pro 与 1280x720 桌面端的数值/bar 右边缘误差不超过 1px。仅保留既有 `globe` 大 chunk warning。
+
+- 状态：done，iPhone XS Max 上首页 Ping 任务行半宽兼容修复已完成本地验证
+- 目标：让多 Ping Task 彩色采样格在较旧 iOS WebKit 的 Chrome 中仍铺满卡片可用宽度，同时保持新版 iPhone、桌面和空状态布局不变。
+- 里程碑：M4 响应式兼容性修复；不改 Ping 数据、请求、缓存、卡片外宽或主题设置。
+- 根因：Ping 面板是纵向 flex `<button>`，任务行只有 `min-width: 0`，依赖 flex 默认 cross-axis stretch；较旧 WebKit 会把按钮内 flex 子项按内容 shrink-to-fit。线上 414px Chromium 正常测得面板/任务行 348/332px；模拟非拉伸后任务行降到 138px、两段 bar 各 66px，与用户 XS Max 截图一致。
+- 计划：面板显式 `items-stretch`，任务行及空状态显式 `w-full self-stretch`；新增 414x896 回归断言任务行占面板宽度至少 90%，然后执行 lint/build 和聚焦浏览器测试。
+- 涉及文件：`src/components/NodeCard.vue`、`tests/visual/visual.spec.ts`、`AICACHE.md`。
+- 实际修改：Ping 面板显式设置 cross-axis stretch；每个任务行和无任务 fallback 显式占满父容器可用宽度，消除旧 WebKit 对按钮内纵向 flex 子项的 shrink-to-fit 差异。未改变 bar 数量、数据、请求或卡片尺寸。
+- 验证：Bun 1.3.14 下 `bun run lint`、`bun run build`、`git diff --check` 通过；系统 Chrome 的多 Ping 原用例与新增 414x896 XS Max 宽度用例 2/2 通过。新增断言确认面板计算样式为 `align-items: stretch`、所有任务行宽度达到面板至少 90%、左右两组 bar 各达到任务行至少 45%。构建仅保留既有 `globe` 大 chunk warning。
+- 运行态边界：桌面 Chromium 可模拟并复现非拉伸时的半宽现象，但无法在本机模拟用户 XS Max 的具体旧 iOS WebKit；建议先用本地构建包在该真机复核，再发布 `3.3.7-thinkemm.2`。
+
 - 状态：done，fork 正式 Release `v3.3.7-thinkemm.1` 已发布并完成线上验证
 - 目标：为 `thinkemm/komari-theme-Glassmorphism` 创建 Komari 远程导入可识别的正式 GitHub Release，并确保附件是项目构建生成的可安装主题 ZIP。
 - 里程碑：M6 发布与验证；不修改功能代码，不同步或合并 upstream。

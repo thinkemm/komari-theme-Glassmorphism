@@ -137,6 +137,53 @@ test('home mini card shows every ping task in backend order without overflow', a
   expect(publicPingTaskRequests).toBe(1)
 })
 
+test('home ping task rows stretch across the card on an iPhone XS Max viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 414, height: 896 })
+  await installKomariFixture(page, { hideEarth: true, pingTaskOrdering: true })
+  await openStablePage(page)
+
+  const card = page.getByRole('button', { name: '查看节点 主控-洛杉矶 详情' })
+  const taskPanel = card.locator('[data-node-ping-tasks]')
+  const layout = await taskPanel.evaluate((panel) => {
+    const panelWidth = panel.getBoundingClientRect().width
+    const taskRows = Array.from(panel.querySelectorAll<HTMLElement>('[data-node-ping-task-id]'))
+    return {
+      alignItems: getComputedStyle(panel).alignItems,
+      rowWidthRatios: taskRows.map(row => row.getBoundingClientRect().width / panelWidth),
+      barWidthRatios: taskRows.flatMap(row => Array.from(row.querySelectorAll<HTMLElement>('[data-node-ping-bars]')).map(bar => bar.getBoundingClientRect().width / row.getBoundingClientRect().width)),
+    }
+  })
+
+  expect(layout.alignItems).toBe('stretch')
+  expect(layout.rowWidthRatios.every(ratio => ratio >= 0.9)).toBe(true)
+  expect(layout.barWidthRatios.every(ratio => ratio >= 0.45)).toBe(true)
+})
+
+test('home ping values align with their bar columns on iPhone 14 Pro and desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 393, height: 852 })
+  await installKomariFixture(page, { hideEarth: true, pingTaskOrdering: true })
+  await openStablePage(page)
+
+  const taskRow = page.getByRole('button', { name: '主控-洛杉矶 Ping 任务监测' }).locator('[data-node-ping-task-id]').first()
+  for (const viewport of [{ width: 393, height: 852 }, { width: 1280, height: 720 }]) {
+    await page.setViewportSize(viewport)
+    const alignment = await taskRow.evaluate((row) => {
+      const latency = row.querySelector<HTMLElement>('[data-node-ping-task-latency]')
+      const loss = row.querySelector<HTMLElement>('[data-node-ping-task-loss]')
+      const bars = row.querySelectorAll<HTMLElement>('[data-node-ping-bars]')
+      if (!latency || !loss || bars.length !== 2)
+        throw new Error('Ping task alignment elements are incomplete')
+      return {
+        latencyRightDelta: Math.abs(latency.getBoundingClientRect().right - bars[0]!.getBoundingClientRect().right),
+        lossRightDelta: Math.abs(loss.getBoundingClientRect().right - bars[1]!.getBoundingClientRect().right),
+      }
+    })
+
+    expect(alignment.latencyRightDelta).toBeLessThanOrEqual(1)
+    expect(alignment.lossRightDelta).toBeLessThanOrEqual(1)
+  }
+})
+
 test('node card expiry uses red through 5 days and yellow through 10 days', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 })
   await installKomariFixture(page, { expiryThresholds: true, hideEarth: true })
