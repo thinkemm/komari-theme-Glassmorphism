@@ -12,6 +12,15 @@
 
 ## 当前任务
 
+- 状态：in-progress，正在发布 fork 正式 Release `v3.3.7-thinkemm.2`
+- 目标：将已推送 `main` 的 Ping 任务行全宽与列对齐修复（`bf67ad5`）重新打包为 Komari 可远程导入的正式 Release。
+- 里程碑：M6 发布与验证；不修改任何功能代码。
+- 版本决策：唯一版本源 `komari-theme.json.version` 从 `3.3.7-thinkemm.1` 更新为 `3.3.7-thinkemm.2`；不修改 `package.json`、作者、主题 short ID 或依赖。
+- 发布路径：lint/build/ZIP 契约验证 -> 版本提交并推送 `origin/main` -> annotated tag -> `gh release create` 上传正式主题 ZIP -> 重新下载线上资产验证。
+- 涉及文件：`komari-theme.json`、`AICACHE.md`；不提交 `dist/`、ZIP、lockfile 或依赖目录。
+- 长期规则：此 fork 每次需要通过 Komari 远程仓库导入交付更新时，都应升级 `komari-theme.json.version`、重新构建并创建包含正式主题 ZIP asset 的新 Release，不能只推送 `main`。
+- 发布前验证：Bun 1.3.14 下 `bun run lint`、`bun run build` 与 `git diff --check` 通过；构建仅保留既有 `globe` 大 chunk warning。提交前 ZIP `komari-theme-Glassmorphism-build-bf67ad5.zip` 为 7,579,003 bytes，SHA-256 `cb120d2d117a044c0eb9442ef8aa1f048195c74fd5b4deb80a20577a5dddd6c8`，包内版本与 `komari-theme.json`、`preview.png`、`dist/index.html` 契约通过。
+
 - 状态：done，首页多 Ping 任务标题与彩条列错位已修复并完成本地验证
 - 目标：延迟值固定对齐左侧延迟彩条的右边缘，丢包率固定对齐右侧丢包彩条的右边缘；覆盖 iPhone 14 Pro 与桌面宽度。
 - 里程碑：M4 响应式 UI 修复；与 XS Max 全宽兼容修复合并验证，不改 Ping 数据或请求链路。
