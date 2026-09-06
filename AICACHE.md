@@ -12,6 +12,15 @@
 
 ## 当前任务
 
+- 状态：in-progress，正在准备 fork 正式 Release `v3.3.7-thinkemm.1`
+- 目标：为 `thinkemm/komari-theme-Glassmorphism` 创建 Komari 远程导入可识别的正式 GitHub Release，并确保附件是项目构建生成的可安装主题 ZIP。
+- 里程碑：M6 发布与验证；不修改功能代码，不同步或合并 upstream。
+- 版本决策：唯一版本源 `komari-theme.json.version` 从上游 `3.3.7` 更新为符合现有 workflow 正则的 `3.3.7-thinkemm.1`；不修改 `package.json`、作者、主题 short ID 或上游 URL 元数据。
+- 发布路径：先本地 lint/build/ZIP 验证，再提交并推送 `origin/main`；由仓库现有 `Release On Version Bump` workflow 创建 annotated tag、正式 Release 和 ZIP asset，避免手工创建冲突，完成后使用 `gh` 核验线上资产。
+- 涉及文件：`komari-theme.json`、`AICACHE.md`。不提交 `dist/`、ZIP、依赖目录或 lockfile 变化。
+- 发布前验证：Bun 1.3.14 下 `bun install --frozen-lockfile`、`bun run lint`、`bun run build` 与 `git diff --check` 通过；仅保留既有 `globe` 大 chunk warning。提交前本地包为 `komari-theme-Glassmorphism-build-ac3ca66.zip`，7,578,961 bytes，SHA-256 `b4749194503a6d739b25946c72b87cdd77ac002573eb7e6496b3713cb35b1c1a`，包内版本和顶层结构符合契约。
+- 冲突检查：本地与远端均不存在 `v3.3.7-thinkemm.1` tag，fork 中同名 Release 不存在；三个 GitHub workflows 均为 active。等待版本提交推送后由 Actions 完成发布。
+
 - 状态：done，首页 Group 分组节点数量已实现并完成本地验证
 - 目标：首页分组筛选按钮自动显示各分组可见节点总数；离线节点仍计入，不增加请求，移动端保持页面无横向溢出。
 - 里程碑：M4 小范围 UI/UX 增强。
