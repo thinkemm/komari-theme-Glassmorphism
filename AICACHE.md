@@ -12,7 +12,7 @@
 
 ## 当前任务
 
-- 状态：in-progress，正在发布 fork 正式 Release `v3.3.7-thinkemm.2`
+- 状态：done，fork 正式 Release `v3.3.7-thinkemm.2` 已发布并完成线上验证
 - 目标：将已推送 `main` 的 Ping 任务行全宽与列对齐修复（`bf67ad5`）重新打包为 Komari 可远程导入的正式 Release。
 - 里程碑：M6 发布与验证；不修改任何功能代码。
 - 版本决策：唯一版本源 `komari-theme.json.version` 从 `3.3.7-thinkemm.1` 更新为 `3.3.7-thinkemm.2`；不修改 `package.json`、作者、主题 short ID 或依赖。
@@ -20,6 +20,8 @@
 - 涉及文件：`komari-theme.json`、`AICACHE.md`；不提交 `dist/`、ZIP、lockfile 或依赖目录。
 - 长期规则：此 fork 每次需要通过 Komari 远程仓库导入交付更新时，都应升级 `komari-theme.json.version`、重新构建并创建包含正式主题 ZIP asset 的新 Release，不能只推送 `main`。
 - 发布前验证：Bun 1.3.14 下 `bun run lint`、`bun run build` 与 `git diff --check` 通过；构建仅保留既有 `globe` 大 chunk warning。提交前 ZIP `komari-theme-Glassmorphism-build-bf67ad5.zip` 为 7,579,003 bytes，SHA-256 `cb120d2d117a044c0eb9442ef8aa1f048195c74fd5b4deb80a20577a5dddd6c8`，包内版本与 `komari-theme.json`、`preview.png`、`dist/index.html` 契约通过。
+- 发布结果：版本提交 `4c0e4e277a095e35cfc1a6ea1f4adf2c0f80c71e` 已推送 `origin/main`；fork Actions API 仍未生成 run，因此按仓库备用流程在该提交创建 annotated tag `v3.3.7-thinkemm.2`，并通过 `gh release create --verify-tag --latest` 创建正式 Release，没有重复创建或覆盖 tag。
+- 线上验证：Release `https://github.com/thinkemm/komari-theme-Glassmorphism/releases/tag/v3.3.7-thinkemm.2` 为非 draft、非 prerelease，并由 GitHub latest Release API 返回。资产 `komari-theme-Glassmorphism-build-4c0e4e2.zip` 状态为 uploaded，7,578,989 bytes，SHA-256 `65b096cef78bc9f680bfbba3fd41e9e87f130d7f46450e27ef0ae79edf4dc233`；重新下载后哈希一致，包内版本为 `3.3.7-thinkemm.2`，且 `komari-theme.json`、`preview.png`、`dist/index.html` 契约通过。
 
 - 状态：done，首页多 Ping 任务标题与彩条列错位已修复并完成本地验证
 - 目标：延迟值固定对齐左侧延迟彩条的右边缘，丢包率固定对齐右侧丢包彩条的右边缘；覆盖 iPhone 14 Pro 与桌面宽度。
