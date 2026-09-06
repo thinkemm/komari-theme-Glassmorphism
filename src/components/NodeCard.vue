@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { NodePingBar } from '@/composables/useNodePingDisplay'
 import type { NodeData } from '@/stores/nodes'
 import { Icon } from '@iconify/vue'
 import { computed } from 'vue'
@@ -64,8 +65,7 @@ const nodeCardMetricGridClass = 'grid-cols-3'
 const nodeCardMetricBoxClass = computed(() => isMiniNodeCard.value
   ? 'px-1 py-1'
   : appStore.nodeCardSize === 'compact' ? 'px-1.5 py-1.5' : 'px-2 py-1.5')
-const nodeCardPanelClass = computed(() => appStore.nodeCardSize === 'large' ? 'h-14' : appStore.nodeCardSize === 'comfortable' ? 'h-12' : isMiniNodeCard.value ? 'h-7' : 'h-11')
-const nodeCardPingPanelClass = computed(() => isMiniNodeCard.value ? 'gap-1 p-1' : 'gap-1.5 p-2')
+const nodeCardPingPanelClass = computed(() => isMiniNodeCard.value ? 'gap-1.5 p-1.5' : 'gap-2 p-2')
 
 const formatBytes = (bytes: number) => formatBytesWithConfig(bytes, appStore.byteDecimals)
 const formatBytesPerSecond = (bytes: number) => formatBytesPerSecondWithConfig(bytes, appStore.byteDecimals)
@@ -89,7 +89,15 @@ const {
   lossDisplay,
   latencyPanelTooltip,
   lossPanelTooltip,
-} = useNodePingDisplay(() => props.node.uuid, { enabled: () => props.pingEnabled })
+  taskDisplays,
+} = useNodePingDisplay(() => props.node.uuid, {
+  enabled: () => props.pingEnabled,
+  currentPing: () => props.node.ping,
+})
+
+function getTaskRenderBars(bars: NodePingBar[]): NodePingBar[] {
+  return isMiniNodeCard.value ? bars.slice(-12) : bars
+}
 
 const trafficUsedPercentage = computed(() => getTrafficUsedPercentage(props.node))
 const trafficUsed = computed(() => getTrafficUsed(props.node))
@@ -447,66 +455,87 @@ function hasRegion(region: string | null | undefined): boolean {
           </div>
         </div>
 
-        <!-- 延迟 + 丢包 -->
-        <div class="grid grid-cols-2 gap-1.5">
-          <button
-            type="button"
-            class="group/panel relative flex flex-col rounded-lg bg-slate-500/5"
-            :class="[nodeCardPingPanelClass, nodeCardPanelClass, !props.node.online ? 'blur-xs opacity-50' : '']"
-            :title="latencyPanelTooltip"
-            :aria-label="`${props.node.name} 延迟监测`"
-            @click.stop="emit('pingClick')"
-          >
-            <div class="flex items-center justify-between text-[11px] leading-none">
-              <span class="text-muted-foreground">延迟</span>
-              <span class="font-medium">{{ latencyDisplay }}</span>
-            </div>
+        <!-- 按后台顺序逐任务显示延迟与丢包，共用现有 Ping subscription/cache。 -->
+        <button
+          type="button"
+          data-node-ping-tasks
+          class="group/panel relative flex w-full flex-col rounded-lg bg-slate-500/5 text-left"
+          :class="[nodeCardPingPanelClass, !props.node.online ? 'blur-xs opacity-50' : '']"
+          :aria-label="`${props.node.name} Ping 任务监测`"
+          @click.stop="emit('pingClick')"
+        >
+          <template v-if="taskDisplays.length">
             <div
-              data-node-ping-bars="latency"
-              class="grid min-h-0 min-w-0 w-full flex-1 items-end gap-[1px] opacity-80 group-hover/panel:opacity-100"
-              :style="{ gridTemplateColumns: `repeat(${latencyRenderBars.length}, minmax(0, 1fr))` }"
+              v-for="task in taskDisplays"
+              :key="task.taskId"
+              :data-node-ping-task-id="task.taskId"
+              class="min-w-0 border-border/40 py-0.5 not-first:border-t not-first:pt-2"
+              :title="task.tooltip"
             >
-              <DataTooltip
-                v-for="bar in latencyRenderBars" :key="bar.key"
-                placement="top" :content="bar.tooltip" class="h-full w-full"
-              >
-                <span
-                  class="block h-full w-full rounded-[1px] transition-transform duration-150 group-hover/data-tooltip:scale-y-160 group-hover/panel:opacity-60 group-hover/data-tooltip:!opacity-100"
-                  :class="bar.className"
-                />
-              </DataTooltip>
+              <div class="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(3.5rem,auto)_minmax(3rem,auto)] items-center gap-1.5 text-[11px] leading-none">
+                <span class="min-w-0 truncate font-medium" :title="task.taskName">{{ task.taskName }}</span>
+                <span class="truncate text-right tabular-nums text-muted-foreground">{{ task.latencyDisplay }}</span>
+                <span class="truncate text-right tabular-nums text-muted-foreground">{{ task.lossDisplay }}</span>
+              </div>
+              <div class="mt-1 grid min-w-0 grid-cols-2 gap-1.5">
+                <div
+                  data-node-ping-bars="latency"
+                  class="grid h-2 min-w-0 items-end gap-[1px] opacity-80 group-hover/panel:opacity-100"
+                  :style="{ gridTemplateColumns: `repeat(${getTaskRenderBars(task.latencyBars).length}, minmax(0, 1fr))` }"
+                >
+                  <DataTooltip
+                    v-for="bar in getTaskRenderBars(task.latencyBars)" :key="bar.key"
+                    placement="top" :content="bar.tooltip" class="h-full w-full"
+                  >
+                    <span
+                      class="block h-full w-full rounded-[1px] transition-transform duration-150 group-hover/data-tooltip:scale-y-160 group-hover/panel:opacity-60 group-hover/data-tooltip:!opacity-100"
+                      :class="bar.className"
+                    />
+                  </DataTooltip>
+                </div>
+                <div
+                  data-node-ping-bars="loss"
+                  class="grid h-2 min-w-0 items-end gap-[1px] opacity-80 group-hover/panel:opacity-100"
+                  :style="{ gridTemplateColumns: `repeat(${getTaskRenderBars(task.lossBars).length}, minmax(0, 1fr))` }"
+                >
+                  <DataTooltip
+                    v-for="bar in getTaskRenderBars(task.lossBars)" :key="bar.key"
+                    placement="top" :content="bar.tooltip" class="h-full w-full"
+                  >
+                    <span
+                      class="block h-full w-full rounded-[1px] transition-transform duration-150 group-hover/data-tooltip:scale-y-160 group-hover/panel:opacity-60 group-hover/data-tooltip:!opacity-100"
+                      :class="bar.className"
+                    />
+                  </DataTooltip>
+                </div>
+              </div>
             </div>
-          </button>
+          </template>
 
-          <button
-            type="button"
-            class="group/panel relative flex flex-col rounded-lg bg-slate-500/5"
-            :class="[nodeCardPingPanelClass, nodeCardPanelClass, !props.node.online ? 'blur-xs opacity-50' : '']"
-            :title="lossPanelTooltip"
-            :aria-label="`${props.node.name} 丢包监测`"
-            @click.stop="emit('pingClick')"
-          >
-            <div class="flex items-center justify-between text-[11px] leading-none">
-              <span class="text-muted-foreground">丢包</span>
-              <span class="font-medium">{{ lossDisplay }}</span>
+          <div v-else class="min-w-0" :title="latencyPanelTooltip || lossPanelTooltip">
+            <div class="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(3.5rem,auto)_minmax(3rem,auto)] items-center gap-1.5 text-[11px] leading-none">
+              <span class="min-w-0 truncate text-muted-foreground">暂无 Ping 任务</span>
+              <span class="truncate text-right tabular-nums text-muted-foreground">{{ latencyDisplay === '-' ? '-- ms' : latencyDisplay }}</span>
+              <span class="truncate text-right tabular-nums text-muted-foreground">{{ lossDisplay === '-' ? '--%' : lossDisplay }}</span>
             </div>
-            <div
-              data-node-ping-bars="loss"
-              class="grid min-h-0 min-w-0 w-full flex-1 items-end gap-[1px] opacity-80 group-hover/panel:opacity-100"
-              :style="{ gridTemplateColumns: `repeat(${lossRenderBars.length}, minmax(0, 1fr))` }"
-            >
-              <DataTooltip
-                v-for="bar in lossRenderBars" :key="bar.key"
-                placement="top" :content="bar.tooltip" class="h-full w-full"
+            <div class="mt-1 grid min-w-0 grid-cols-2 gap-1.5">
+              <div
+                data-node-ping-bars="latency"
+                class="grid h-2 min-w-0 items-end gap-[1px] opacity-60"
+                :style="{ gridTemplateColumns: `repeat(${getTaskRenderBars(latencyRenderBars).length}, minmax(0, 1fr))` }"
               >
-                <span
-                  class="block h-full w-full rounded-[1px] transition-transform duration-150 group-hover/data-tooltip:scale-y-160 group-hover/panel:opacity-60 group-hover/data-tooltip:!opacity-100"
-                  :class="bar.className"
-                />
-              </DataTooltip>
+                <span v-for="bar in getTaskRenderBars(latencyRenderBars)" :key="bar.key" class="block h-full w-full rounded-[1px]" :class="bar.className" />
+              </div>
+              <div
+                data-node-ping-bars="loss"
+                class="grid h-2 min-w-0 items-end gap-[1px] opacity-60"
+                :style="{ gridTemplateColumns: `repeat(${getTaskRenderBars(lossRenderBars).length}, minmax(0, 1fr))` }"
+              >
+                <span v-for="bar in getTaskRenderBars(lossRenderBars)" :key="bar.key" class="block h-full w-full rounded-[1px]" :class="bar.className" />
+              </div>
             </div>
-          </button>
-        </div>
+          </div>
+        </button>
 
         <!-- 自定义标签 -->
         <div v-if="customTags.length > 0" class="flex flex-wrap gap-1">

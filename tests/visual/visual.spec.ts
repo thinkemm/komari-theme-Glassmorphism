@@ -102,6 +102,41 @@ test('home mini card metric icons remain accessible', async ({ page }) => {
   await expect(card.getByRole('img', { name: '内存' })).toBeVisible()
 })
 
+test('home group tabs show visible node totals including offline nodes on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await installKomariFixture(page, { hideEarth: true })
+  await openStablePage(page)
+
+  await expect(page.getByRole('tab', { name: '全部节点', exact: true })).toBeVisible()
+  await expect(page.getByRole('tab', { name: '生产 6', exact: true })).toBeVisible()
+  await expect(page.getByRole('tab', { name: '测试,边缘 6', exact: true })).toBeVisible()
+  await expect(page.locator('html')).toHaveJSProperty('scrollWidth', await page.locator('html').evaluate(element => element.clientWidth))
+})
+
+test('home mini card shows every ping task in backend order without overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  let publicPingTaskRequests = 0
+  page.on('request', (request) => {
+    if (request.url().endsWith('/rpc2') && request.postDataJSON()?.method === 'public:getPublicPingTasks')
+      publicPingTaskRequests += 1
+  })
+  await installKomariFixture(page, { nodeCardSize: 'mini', hideEarth: true, pingTaskOrdering: true })
+  await openStablePage(page)
+
+  const card = page.getByRole('button', { name: '查看节点 主控-洛杉矶 详情' })
+  const taskPanel = card.locator('[data-node-ping-tasks]')
+  const taskRows = taskPanel.locator('[data-node-ping-task-id]')
+  await expect(taskRows).toHaveCount(3)
+  await expect(taskRows.first()).toHaveAttribute('data-node-ping-task-id', '30')
+  await expect(taskRows.nth(1)).toHaveAttribute('data-node-ping-task-id', '10')
+  await expect(taskRows.nth(2)).toHaveAttribute('data-node-ping-task-id', '20')
+  await expect(taskRows.first()).toContainText('120 ms')
+  await expect(taskRows.first()).toContainText('0.0%')
+  await expect(taskRows.nth(1).getByText('浙江联通骨干网络超长任务名称')).toHaveCSS('text-overflow', 'ellipsis')
+  await expect.poll(() => taskPanel.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+  expect(publicPingTaskRequests).toBe(1)
+})
+
 test('node card expiry uses red through 5 days and yellow through 10 days', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 })
   await installKomariFixture(page, { expiryThresholds: true, hideEarth: true })

@@ -1,4 +1,5 @@
 import type { MaybeRefOrGetter } from 'vue'
+import type { NodeStatusPing } from '@/utils/rpc'
 import { computed, toValue } from 'vue'
 import { useNodePingStats } from '@/composables/useNodePingStats'
 import { PING_SUMMARY_MAX_COUNT } from '@/constants/load'
@@ -13,12 +14,24 @@ export interface NodePingBar {
   tooltip: string
 }
 
+export interface NodePingTaskDisplay {
+  taskId: number
+  taskName: string
+  latencyDisplay: string
+  lossDisplay: string
+  latencyBars: NodePingBar[]
+  lossBars: NodePingBar[]
+  tooltip: string
+  hasData: boolean
+}
+
 interface UseNodePingDisplayOptions {
   enabled?: MaybeRefOrGetter<boolean>
   loadingDisplayText?: string
   emptyDisplayText?: string
   loadingPanelTooltipText?: Partial<Record<NodePingMetric, string>>
   emptyPanelTooltipText?: Partial<Record<NodePingMetric, string>>
+  currentPing?: MaybeRefOrGetter<Record<string, NodeStatusPing> | undefined>
 }
 
 const EMPTY_PING_BAR_COUNT = 20
@@ -72,10 +85,14 @@ export function useNodePingDisplay(
     hours: pingStatsHours,
     enabled: pingStatsEnabled,
     maxCount: PING_SUMMARY_MAX_COUNT,
+    currentPing: options.currentPing,
   })
 
-  function buildPingBars(metric: NodePingMetric): NodePingBar[] {
-    const points = pingStats.history.value
+  function buildPingBars(
+    points: Array<{ time: string, latency: number | null, loss: number | null }>,
+    metric: NodePingMetric,
+    keyPrefix = 'summary',
+  ): NodePingBar[] {
     if (!points.length)
       return []
 
@@ -83,7 +100,7 @@ export function useNodePingDisplay(
       const value = point[metric]
 
       return {
-        key: `${point.time}-${index}`,
+        key: `${keyPrefix}-${point.time}-${index}`,
         className: value === null
           ? 'bg-muted-foreground/15'
           : metric === 'latency'
@@ -98,7 +115,7 @@ export function useNodePingDisplay(
     })
   }
 
-  function buildEmptyPingBars(metric: NodePingMetric): NodePingBar[] {
+  function buildEmptyPingBars(metric: NodePingMetric, keyPrefix = 'summary'): NodePingBar[] {
     const tooltip = pingStats.loading.value
       ? '加载中'
       : pingStats.error.value
@@ -110,14 +127,14 @@ export function useNodePingDisplay(
               : '无采样数据'
 
     return Array.from({ length: EMPTY_PING_BAR_COUNT }, (_, index) => ({
-      key: `${metric}-empty-${index}`,
+      key: `${keyPrefix}-${metric}-empty-${index}`,
       className: 'bg-muted-foreground/10',
       tooltip,
     }))
   }
 
-  const latencyBars = computed(() => buildPingBars('latency'))
-  const lossBars = computed(() => buildPingBars('loss'))
+  const latencyBars = computed(() => buildPingBars(pingStats.history.value, 'latency'))
+  const lossBars = computed(() => buildPingBars(pingStats.history.value, 'loss'))
   const latencyRenderBars = computed(() => latencyBars.value.length ? latencyBars.value : buildEmptyPingBars('latency'))
   const lossRenderBars = computed(() => lossBars.value.length ? lossBars.value : buildEmptyPingBars('loss'))
 
@@ -159,6 +176,25 @@ export function useNodePingDisplay(
     return `平均丢包 ${pingStats.avgLoss.value.toFixed(1)}%${volatility}`
   })
 
+  const taskDisplays = computed<NodePingTaskDisplay[]>(() => pingStats.tasks.value.map((task) => {
+    const keyPrefix = String(task.taskId)
+    const latencyBars = buildPingBars(task.history, 'latency', keyPrefix)
+    const lossBars = buildPingBars(task.history, 'loss', keyPrefix)
+
+    return {
+      taskId: task.taskId,
+      taskName: task.taskName,
+      latencyDisplay: task.latency === null ? '-- ms' : `${Math.round(task.latency)} ms`,
+      lossDisplay: task.loss === null ? '--%' : `${task.loss.toFixed(1)}%`,
+      latencyBars: latencyBars.length ? latencyBars : buildEmptyPingBars('latency', keyPrefix),
+      lossBars: lossBars.length ? lossBars : buildEmptyPingBars('loss', keyPrefix),
+      tooltip: task.hasData
+        ? `${task.taskName}\n当前延迟 ${task.latency === null ? '--' : `${Math.round(task.latency)} ms`}\n当前丢包 ${task.loss === null ? '--' : `${task.loss.toFixed(1)}%`}`
+        : `${task.taskName}\n无采样数据`,
+      hasData: task.hasData,
+    }
+  }))
+
   return {
     pingStats,
     pingStatsEnabled,
@@ -169,5 +205,6 @@ export function useNodePingDisplay(
     lossDisplay,
     latencyPanelTooltip,
     lossPanelTooltip,
+    taskDisplays,
   }
 }

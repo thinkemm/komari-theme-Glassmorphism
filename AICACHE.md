@@ -12,6 +12,31 @@
 
 ## 当前任务
 
+- 状态：done，首页 Group 分组节点数量已实现并完成本地验证
+- 目标：首页分组筛选按钮自动显示各分组可见节点总数；离线节点仍计入，不增加请求，移动端保持页面无横向溢出。
+- 里程碑：M4 小范围 UI/UX 增强。
+- 计划：复用 `nodesStore.visibleNodes` 与节点标准化后的 `groups` 字段，在 HomeView computed 中一次遍历统计；“全部节点”保持无数字；复用现有横向滚动容器展示紧凑计数；补 390px 浏览器回归后执行 lint/build。
+- 涉及文件：`src/views/HomeView.vue`、`tests/visual/visual.spec.ts`、`AICACHE.md`。
+- 不做：不新增 API、store、配置项、依赖或版本变更；不改筛选语义，不按在线状态过滤计数。
+- 实际修改：`HomeView` 基于现有 `nodesStore.visibleNodes` 一次遍历节点标准化后的 `groups` 字段，为各分组筛选按钮追加紧凑、等宽数字徽标；“全部节点”保持无数字。计数不读取在线状态，因此上下线变化不会改变分组总数，也没有增加 API、RPC 或订阅请求。
+- 响应式：沿用首页控制栏已有的横向滚动容器，按钮内部使用紧凑间距和最小宽度计数徽标；390x844 回归确认文档 `scrollWidth === clientWidth`，页面本身不横向溢出。
+- 验证：临时 Bun 1.3.14 下 `bun run lint`、`bun run build`、`git diff --check` 通过；系统 Chrome 的定向 Playwright 用例 2/2 通过，覆盖离线节点仍计数、移动端无页面溢出，并回归多 Ping 任务展示。
+- 构建产物：`komari-theme-Glassmorphism-build-bf83765.zip`，顶层仍为 `komari-theme.json`、`preview.png`、`dist/`，SHA-256 `b7bc66470aa9bcfb4b96a82427f27f9bc187312961b5c2269294f5cba9774956`。
+
+- 状态：done，首页 NodeCard 多 Ping Task 逐行展示已实现并完成本地验证
+- 目标：首页节点卡底部按 Komari 后台公开 Ping Task 顺序逐行显示任务名、当前延迟、当前丢包率及两组趋势块；单任务、多任务、无数据和单行缺值均安全降级。
+- 里程碑：M5 首页展示能力 + M4 响应式 UI；不修改 Komari 后端、详情页 Ping 图表或现有请求分层。
+- 实际修改：`nodes` store 保留首页已有的实时 `NodeStatus.ping`；`useNodePingStats` 在原共享结果中保留后台任务列表和逐任务 loss 点，并用实时字段覆盖每行当前值、派生独立历史；legacy fallback 改用同一次 `common:getRecords` 响应携带的 tasks。`useNodePingDisplay` 复用原色阶/tooltip 生成逐任务趋势块；`NodeCard` 用单个整宽玻璃容器纵向渲染任务；mini 每组取末 12 格，其他模式保持 20 格。
+- 涉及文件：`src/stores/nodes.ts`、`src/composables/useNodePingStats.ts`、`src/composables/useNodePingDisplay.ts`、`src/components/NodeCard.vue`、`src/services/history.service.ts`、`src/services/metrics.service.ts`、`tests/visual/fixtures/komari.ts`、`tests/visual/visual.spec.ts`、`AICACHE.md`。
+- 性能边界：继续复用每节点现有 Ping metric/legacy subscription、RequestManager 和 60 秒刷新；公开任务列表全局缓存，不为每个任务单独请求，不建立第二套 NodeCard 请求链路。
+- 配置决策：本次不新增主题配置项；新增 summary/tasks 设置会扩大到 manifest、app store 和双套模板，且用户目标是直接替换首页旧 Ping 区域。
+- 不做：不改详情页、NodeList 聚合条、版本号、依赖、package manager、Release、commit 或 push。
+- fallback：任务有历史但最新延迟缺失时该行显示 `-- ms`；loss 缺失显示 `--%`；零任务/零数据时显示单个“暂无 Ping 任务”容器和空趋势格，不抛错。只显示有该节点数据或任务 clients 明确包含该节点的任务。
+- 性能结果：未增加按任务请求；每节点仍是原 metric stats + metric series 或单次 legacy fallback，公开任务列表经 RequestManager 去重并新增 5 分钟共享缓存。12 节点回归中 `public:getPublicPingTasks` 仅请求 1 次。
+- 验证：临时 Bun 1.3.14 下 `bun run type-check`、`bun run lint`、`bun run build`、`git diff --check` 通过；构建生成 `komari-theme-Glassmorphism-build-bf83765.zip`，包内版本 3.3.7，共 771 files，顶层为 `komari-theme.json`、`preview.png`、`dist/`。
+- 浏览器：系统 Chrome 的定向 Playwright 用例通过，覆盖后台顺序 `30,10,20`、3 行任务、390x844、mini、长名称省略、无横向溢出和任务列表单请求；agent-browser 生产预览同样确认 390px 页面 `scrollWidth === clientWidth`。
+- 已知限制：本机未运行 Komari 后端，生产预览只能验证装载和响应式边界；真实后端的新旧 Ping API 数据形态仍建议部署后复核。未更新全套截图基线，因为 NodeCard Ping 区属于本次预期视觉变化，已使用聚焦 DOM 回归覆盖。
+
 - 状态：in-progress，本地修复与验证完成，正在发布 v3.3.5
 - 目标：修复详情页延迟任务卡片、图例和主页 Ping 指标线与 Komari 后台任务排序不一致的问题。
 - 里程碑：M4 UI/UX 兼容性修复，不修改后端任务权重或接口契约。

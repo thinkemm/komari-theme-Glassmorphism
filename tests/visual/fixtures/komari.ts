@@ -241,7 +241,7 @@ async function handleRpc(route: Route, clientFixtures = clients, options: Visual
   const pingTasks = options.pingTaskOrdering
     ? [
         { id: 30, name: '浙江移动', interval: 60, loss: 0, weight: 0 },
-        { id: 10, name: '浙江联通', interval: 60, loss: 0, weight: 1 },
+        { id: 10, name: '浙江联通骨干网络超长任务名称', interval: 60, loss: 0, weight: 1 },
         { id: 20, name: '浙江电信', interval: 60, loss: 0, weight: 2 },
       ]
     : [{ id: 1, name: 'Tokyo', interval: 60, loss: 3.2, weight: 1 }]
@@ -264,7 +264,20 @@ async function handleRpc(route: Route, clientFixtures = clients, options: Visual
       result = clientFixtures
       break
     case 'common:getNodesLatestStatus':
-      result = statuses
+      result = options.pingTaskOrdering
+        ? Object.fromEntries(Object.entries(statuses).map(([clientUuid, status]) => [clientUuid, {
+            ...status,
+            ping: Object.fromEntries(pingTasks.map(task => [String(task.id), {
+              name: task.name,
+              latest: status.online ? 90 + task.id : -1,
+              avg: 80 + task.id,
+              tail: 120 + task.id,
+              loss: status.online ? 0 : 100,
+              min: 40 + task.id,
+              max: 140 + task.id,
+            }])),
+          }]))
+        : statuses
       break
     case 'common:getNodeRecentStatus':
       result = { count: 48, records: buildRecords(uuid) }

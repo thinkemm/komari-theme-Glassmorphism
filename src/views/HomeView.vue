@@ -129,10 +129,18 @@ watch(searchText, (value) => {
   updateDebouncedSearch(value)
 })
 
-const groups = computed(() => [
-  { tab: '全部节点', name: 'all' },
-  ...nodesStore.groups.map(g => ({ tab: g, name: g })),
-])
+const groups = computed(() => {
+  const counts = new Map<string, number>()
+  for (const node of nodesStore.visibleNodes) {
+    for (const group of node.groups)
+      counts.set(group, (counts.get(group) ?? 0) + 1)
+  }
+
+  return [
+    { tab: '全部节点', name: 'all', count: null },
+    ...nodesStore.groups.map(group => ({ tab: group, name: group, count: counts.get(group) ?? 0 })),
+  ]
+})
 
 const quickControlKeys = computed<HomeQuickControlKey[]>(() => appStore.homeQuickControlOrder.filter(key => key !== 'monthlyCost'))
 const quickControls = computed(() => quickControlKeys.value.map(key => quickControlDefinitions[key]))
@@ -446,9 +454,15 @@ const nodeCardGridClass = computed(() => {
                 <TabsList class="w-max h-8 bg-background/50 backdrop-blur-xl rounded-md pointer-events-auto">
                   <TabsTrigger
                     v-for="g in groups" :key="g.name" :value="g.name"
-                    class="h-6.5 flex-none shrink-0 text-xs border-none data-[state=active]:text-selection shadow-none rounded-sm"
+                    class="h-6.5 flex-none shrink-0 gap-1 text-xs border-none data-[state=active]:text-selection shadow-none rounded-sm"
                   >
-                    {{ g.tab }}
+                    <span>{{ g.tab }}</span>
+                    <span
+                      v-if="g.count !== null"
+                      class="min-w-4 rounded-full bg-slate-500/10 px-1 text-center text-[10px] leading-4 tabular-nums text-foreground/65"
+                    >
+                      {{ g.count }}
+                    </span>
                   </TabsTrigger>
                 </TabsList>
 
